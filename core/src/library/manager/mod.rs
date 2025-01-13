@@ -209,25 +209,26 @@ impl Libraries {
 						device::date_created::set(Some(now)),
 					],
 				}),
-				Some({
-					let identity = Identity::new();
-					let mut create = instance.unwrap_or_else(|| instance::Create {
-						pub_id: Uuid::now_v7().as_bytes().to_vec(),
-						remote_identity: identity.to_remote_identity().get_bytes().to_vec(),
-						node_id: node_cfg.id.to_db(),
-						last_seen: now,
-						date_created: now,
-						_params: vec![
-							instance::identity::set(Some(identity.to_bytes())),
-							instance::metadata::set(Some(
-								serde_json::to_vec(&node.p2p.peer_metadata())
-									.expect("invalid node metadata"),
-							)),
-						],
-					});
-					create._params.push(instance::id::set(config.instance_id));
-					create
-				}),
+				// Some({
+				// 	let identity = Identity::new();
+				// 	let mut create = instance.unwrap_or_else(|| instance::Create {
+				// 		pub_id: Uuid::now_v7().as_bytes().to_vec(),
+				// 		remote_identity: identity.to_remote_identity().get_bytes().to_vec(),
+				// 		node_id: node_cfg.id.to_db(),
+				// 		last_seen: now,
+				// 		date_created: now,
+				// 		_params: vec![
+				// 			instance::identity::set(Some(identity.to_bytes())),
+				// 			instance::metadata::set(Some(
+				// 				serde_json::to_vec(&node.p2p.peer_metadata())
+				// 					.expect("invalid node metadata"),
+				// 			)),
+				// 		],
+				// 	});
+				// 	create._params.push(instance::id::set(config.instance_id));
+				// 	create
+				// }),
+				None,
 				should_seed,
 				node,
 			)
@@ -465,9 +466,9 @@ impl Libraries {
 		}
 
 		// TODO: remove instances from locations
-		if let Some(create) = maybe_create_instance {
-			create.to_query(&db).exec().await?;
-		}
+		// if let Some(create) = maybe_create_instance {
+		// 	create.to_query(&db).exec().await?;
+		// }
 
 		let node_config = node.config.get().await;
 		let device_pub_id = node_config.id.clone();
@@ -475,13 +476,13 @@ impl Libraries {
 
 		let instances = db.instance().find_many(vec![]).exec().await?;
 
-		let instance = instances
-			.iter()
-			.find(|i| i.id == config.instance_id)
-			.ok_or_else(|| {
-				LibraryManagerError::CurrentInstanceNotFound(config.instance_id.to_string())
-			})?
-			.clone();
+		// let instance = instances
+		// 	.iter()
+		// 	.find(|i| i.id == config.instance_id)
+		// 	.ok_or_else(|| {
+		// 		LibraryManagerError::CurrentInstanceNotFound(config.instance_id.to_string())
+		// 	})?
+		// 	.clone();
 
 		let devices = db.device().find_many(vec![]).exec().await?;
 
@@ -493,25 +494,25 @@ impl Libraries {
 			return Err(LibraryManagerError::CurrentDeviceNotFound(device_pub_id));
 		}
 
-		let identity = match instance.identity.as_ref() {
-			Some(b) => Arc::new(Identity::from_bytes(b)?),
-			// We are not this instance, so we don't have the private key.
-			None => return Err(LibraryManagerError::InvalidIdentity),
-		};
+		// let identity = match instance.identity.as_ref() {
+		// 	Some(b) => Arc::new(Identity::from_bytes(b)?),
+		// 	// We are not this instance, so we don't have the private key.
+		// 	None => return Err(LibraryManagerError::InvalidIdentity),
+		// };
 
-		let instance_id = Uuid::from_slice(&instance.pub_id)?;
-		let curr_metadata: Option<HashMap<String, String>> = instance
-			.metadata
-			.as_ref()
-			.map(|metadata| serde_json::from_slice(metadata).expect("invalid metadata"));
-		let instance_node_id = Uuid::from_slice(&instance.node_id)?;
-		let instance_node_remote_identity = instance
-			.node_remote_identity
-			.as_ref()
-			.and_then(|v| RemoteIdentity::from_bytes(v).ok());
+		let instance_id = Uuid::now_v7();
+		// let curr_metadata: Option<HashMap<String, String>> = instance
+		// 	.metadata
+		// 	.as_ref()
+		// 	.map(|metadata| serde_json::from_slice(metadata).expect("invalid metadata"));
+		let instance_node_id = Uuid::now_v7();
+		// let instance_node_remote_identity = instance
+		// 	.node_remote_identity
+		// 	.as_ref()
+		// 	.and_then(|v| RemoteIdentity::from_bytes(v).ok());
 		if instance_node_id != Uuid::from(&node_config.id)
-			|| instance_node_remote_identity != Some(node_config.identity.to_remote_identity())
-			|| curr_metadata != Some(node.p2p.peer_metadata())
+		// || instance_node_remote_identity != Some(node_config.identity.to_remote_identity())
+		// || curr_metadata != Some(node.p2p.peer_metadata())
 		{
 			info!(
 				old_node_id = %instance_node_id,
@@ -521,27 +522,27 @@ impl Libraries {
 
 			// ensure
 
-			db.instance()
-				.update(
-					instance::id::equals(instance.id),
-					vec![
-						instance::node_id::set(node_config.id.to_db()),
-						instance::node_remote_identity::set(Some(
-							node_config
-								.identity
-								.to_remote_identity()
-								.get_bytes()
-								.to_vec(),
-						)),
-						instance::metadata::set(Some(
-							serde_json::to_vec(&node.p2p.peer_metadata())
-								.expect("invalid peer metadata"),
-						)),
-					],
-				)
-				.select(instance::select!({ id }))
-				.exec()
-				.await?;
+			// db.instance()
+			// 	.update(
+			// 		instance::id::equals(instance_id),
+			// 		vec![
+			// 			instance::node_id::set(node_config.id.to_db()),
+			// 			instance::node_remote_identity::set(Some(
+			// 				node_config
+			// 					.identity
+			// 					.to_remote_identity()
+			// 					.get_bytes()
+			// 					.to_vec(),
+			// 			)),
+			// 			instance::metadata::set(Some(
+			// 				serde_json::to_vec(&node.p2p.peer_metadata())
+			// 					.expect("invalid peer metadata"),
+			// 			)),
+			// 		],
+			// 	)
+			// 	.select(instance::select!({ id }))
+			// 	.exec()
+			// 	.await?;
 		}
 
 		// TODO: Move this reconciliation into P2P and do reconciliation of both local and remote nodes.
@@ -553,6 +554,8 @@ impl Libraries {
 			&devices,
 		)
 		.await?;
+
+		let identity = Arc::new(Identity::new());
 
 		let library = Library::new(id, config, instance_id, identity, db, node, sync).await;
 
@@ -573,16 +576,7 @@ impl Libraries {
 			sd_core_indexer_rules::seed::new_or_existing_library(&library.db).await?;
 		}
 
-		for location in library
-			.db
-			.location()
-			.find_many(vec![
-				// TODO(N): This isn't gonna work with removable media and this will likely permanently break if the DB is restored from a backup.
-				location::instance_id::equals(Some(instance.id)),
-			])
-			.exec()
-			.await?
-		{
+		for location in library.db.location().find_many(vec![]).exec().await? {
 			if let Err(e) = node.locations.add(location.id, library.clone()).await {
 				error!(?e, "Failed to watch location on startup;");
 			};

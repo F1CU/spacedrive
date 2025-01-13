@@ -109,84 +109,84 @@ impl P2PManager {
 		);
 
 		Ok((this.clone(), |node: Arc<Node>, router| {
-			tokio::spawn(start(this.clone(), node.clone(), rx, router));
+			// tokio::spawn(start(this.clone(), node.clone(), rx, router));
 
 			// TODO: Cleanup this thread on p2p shutdown.
-			tokio::spawn(async move {
-				let client = reqwest::Client::new();
-				loop {
-					match client
-						// FIXME(@fogodev): hardcoded URL for now as I'm moving stuff around
-						.get(format!("{}/api/p2p/relays", "https://app.spacedrive.com"))
-						.send()
-						.await
-					{
-						Ok(resp) => {
-							if resp.status() != 200 {
-								error!(
-									"Failed to pull p2p relay configuration: {} {:?}",
-									resp.status(),
-									resp.text().await
-								);
-							} else {
-								match resp.json::<Vec<RelayServerEntry>>().await {
-									Ok(config) => {
-										node.p2p
-											.relay_config
-											.lock()
-											.unwrap_or_else(PoisonError::into_inner)
-											.clone_from(&config);
+			// tokio::spawn(async move {
+			// 	let client = reqwest::Client::new();
+			// 	loop {
+			// 		match client
+			// 			// FIXME(@fogodev): hardcoded URL for now as I'm moving stuff around
+			// 			.get(format!("{}/api/p2p/relays", "https://app.spacedrive.com"))
+			// 			.send()
+			// 			.await
+			// 		{
+			// 			Ok(resp) => {
+			// 				if resp.status() != 200 {
+			// 					error!(
+			// 						"Failed to pull p2p relay configuration: {} {:?}",
+			// 						resp.status(),
+			// 						resp.text().await
+			// 					);
+			// 				} else {
+			// 					match resp.json::<Vec<RelayServerEntry>>().await {
+			// 						Ok(config) => {
+			// 							node.p2p
+			// 								.relay_config
+			// 								.lock()
+			// 								.unwrap_or_else(PoisonError::into_inner)
+			// 								.clone_from(&config);
 
-										let config = {
-											let node_config = node.config.get().await;
-											if !node_config.p2p.disabled
-												&& !node_config.p2p.disable_relay
-											{
-												config
-											} else {
-												vec![]
-											}
-										};
-										let no_relays = config.len();
+			// 							let config = {
+			// 								let node_config = node.config.get().await;
+			// 								if !node_config.p2p.disabled
+			// 									&& !node_config.p2p.disable_relay
+			// 								{
+			// 									config
+			// 								} else {
+			// 									vec![]
+			// 								}
+			// 							};
+			// 							let no_relays = config.len();
 
-										this.listeners
-											.lock()
-											.unwrap_or_else(PoisonError::into_inner)
-											.relay = match this.quic_transport.set_relay_config(config).await {
-											Ok(_) => {
-												info!(
-													"Updated p2p relay configuration successfully."
-												);
-												if no_relays == 0 {
-													this.quic.disable();
+			// 							this.listeners
+			// 								.lock()
+			// 								.unwrap_or_else(PoisonError::into_inner)
+			// 								.relay = match this.quic_transport.set_relay_config(config).await {
+			// 								Ok(_) => {
+			// 									info!(
+			// 										"Updated p2p relay configuration successfully."
+			// 									);
+			// 									if no_relays == 0 {
+			// 										this.quic.disable();
 
-													ListenerState::NotListening
-												} else {
-													this.quic.enable();
+			// 										ListenerState::NotListening
+			// 									} else {
+			// 										this.quic.enable();
 
-													ListenerState::Listening
-												}
-											}
-											Err(err) => ListenerState::Error {
-												error: err.to_string(),
-											},
-										};
-									}
-									Err(e) => {
-										error!(?e, "Failed to parse p2p relay configuration;")
-									}
-								}
-							}
-						}
-						Err(e) => error!(?e, "Error pulling p2p relay configuration;"),
-					}
+			// 										ListenerState::Listening
+			// 									}
+			// 								}
+			// 								Err(err) => ListenerState::Error {
+			// 									error: err.to_string(),
+			// 								},
+			// 							};
+			// 						}
+			// 						Err(e) => {
+			// 							error!(?e, "Failed to parse p2p relay configuration;")
+			// 						}
+			// 					}
+			// 				}
+			// 			}
+			// 			Err(e) => error!(?e, "Error pulling p2p relay configuration;"),
+			// 		}
 
-					tokio::select! {
-						_ = this.trigger_relay_config_update.notified() => {}
-						_ = tokio::time::sleep(Duration::from_secs(11 * 60)) => {}
-					}
-				}
-			});
+			// 		tokio::select! {
+			// 			_ = this.trigger_relay_config_update.notified() => {}
+			// 			_ = tokio::time::sleep(Duration::from_secs(11 * 60)) => {}
+			// 		}
+			// 	}
+			// });
 		}))
 	}
 
@@ -401,28 +401,29 @@ async fn start(
 						return;
 					};
 
-					let Ok(library) = node
-						.libraries
-						.get_library_for_instance(&tunnel.library_remote_identity())
-						.await
-						.ok_or_else(|| {
-							error!(remove_identity = %tunnel.library_remote_identity(), "Failed to get library;");
+					// let Ok(library) = node
+					// 	.libraries
+					// 	.get_library_for_instance(&tunnel.library_remote_identity())
+					// 	.await
+					// 	.ok_or_else(|| {
+					// 		error!(remove_identity = %tunnel.library_remote_identity(), "Failed to get library;");
 
-							// TODO: Respond to remote client with warning!
-						})
-					else {
-						return;
-					};
+					// 		// TODO: Respond to remote client with warning!
+					// 	})
+					// else {
+					// 	return;
+					// };
+					return;
 
-					match msg {
-						SyncMessage::NewOperations => {
-							let Err(()) = super::sync::responder(&mut tunnel, library).await else {
-								return;
-							};
+					// match msg {
+					// 	SyncMessage::NewOperations => {
+					// 		let Err(()) = super::sync::responder(&mut tunnel, library).await else {
+					// 			return;
+					// 		};
 
-							error!("Failed to handle sync responder request");
-						}
-					};
+					// 		error!("Failed to handle sync responder request");
+					// 	}
+					// };
 				}
 				Header::RspcRemote => {
 					let remote = stream.remote_identity();

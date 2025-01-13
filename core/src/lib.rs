@@ -142,9 +142,9 @@ impl Node {
 				(
 					"https://auth.spacedrive.com/cloud-api-address".to_string(),
 					"https://relay.spacedrive.com/".to_string(),
-					"irohdns.spacedrive.com".to_string(),
-					"irohdns.spacedrive.com/pkarr".to_string(),
-					"api.spacedrive.com".to_string(),
+					"https://irohdns.spacedrive.com".to_string(),
+					"https://irohdns.spacedrive.com/pkarr".to_string(),
+					"https://api.spacedrive.com".to_string(),
 				)
 			}
 		};
@@ -224,25 +224,25 @@ impl Node {
 			)
 			.await?;
 
-		start_p2p(
-			node.clone(),
-			axum::Router::new()
-				.nest(
-					"/uri",
-					custom_uri::base_router().with_state(custom_uri::with_state(node.clone())),
-				)
-				.nest(
-					"/rspc",
-					router
-						.clone()
-						.endpoint({
-							let node = node.clone();
-							move |_| node.clone()
-						})
-						.axum::<()>(),
-				)
-				.into_make_service(),
-		);
+		// start_p2p(
+		// 	node.clone(),
+		// 	axum::Router::new()
+		// 		.nest(
+		// 			"/uri",
+		// 			custom_uri::base_router().with_state(custom_uri::with_state(node.clone())),
+		// 		)
+		// 		.nest(
+		// 			"/rspc",
+		// 			router
+		// 				.clone()
+		// 				.endpoint({
+		// 					let node = node.clone();
+		// 					move |_| node.clone()
+		// 				})
+		// 				.axum::<()>(),
+		// 		)
+		// 		.into_make_service(),
+		// );
 
 		// save_storage_statistics(&node);
 
