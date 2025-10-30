@@ -47,7 +47,6 @@ jobs:
           #   bundles: deb
           # - host: ubuntu-22.04
           #   target: aarch64-unknown-linux-musl
-
     name: Desktop - Main ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     steps:
@@ -81,18 +80,6 @@ jobs:
           base64 --decode -i AuthKey_${{ secrets.APPLE_API_KEY }}.p8.base64 -o AuthKey_${{ secrets.APPLE_API_KEY }}.p8
           rm AuthKey_${{ secrets.APPLE_API_KEY }}.p8.base64
        
-      - name: Set up SSH for private repositories
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          git config --global url."git@github.com:".insteadOf "https://github.com/"    
-       
-      - name: Configure Git credentials
-        run: |
-          git config --global url."https://${{ secrets.GITHUB_TOKEN }}:x-oauth-basic@github.com/spacedriveapp".insteadOf "https://github.com/spacedriveapp"   
-
       - name: Check for Apple certificate 
         if: ${{ runner.os == 'macOS' }} 
         id: cert_check 
