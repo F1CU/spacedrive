@@ -47,6 +47,7 @@ jobs:
           #   bundles: deb
           # - host: ubuntu-22.04
           #   target: aarch64-unknown-linux-musl
+
     name: Desktop - Main ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     steps:
@@ -79,18 +80,38 @@ jobs:
           echo ${{ secrets.APPLE_API_KEY_BASE64 }} >> AuthKey_${{ secrets.APPLE_API_KEY }}.p8.base64
           base64 --decode -i AuthKey_${{ secrets.APPLE_API_KEY }}.p8.base64 -o AuthKey_${{ secrets.APPLE_API_KEY }}.p8
           rm AuthKey_${{ secrets.APPLE_API_KEY }}.p8.base64
+       
+       - name: Configure Git credentials
+         run: |
+           git config --global url."https://${{ secrets.GITHUB_TOKEN }}:x-oauth-basic@github.com/spacedriveapp".insteadOf "https://github.com/spacedriveapp"
+  
+       - name: Set up SSH for private repositories
+         run: |
+           mkdir -p ~/.ssh
+           ssh-keyscan github.com >> ~/.ssh/known_hosts
+           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+           chmod 600 ~/.ssh/id_rsa
+           git config --global url."git@github.com:".insteadOf "https://github.com/"       
+
       - name: Check for Apple certificate 
         if: ${{ runner.os == 'macOS' }} 
         id: cert_check 
-        run: |
-          set -e
-          
+        shell: bash 
+        run: | 
+          set -euo pipefail if [ -n "${{ secrets.APPLE_CERTIFICATE }}" ]; then echo "has_cert=true" >> $GITHUB_OUTPUT else echo "has_cert=false" >> $GITHUB_OUTPUT fi
+      
       - name: Install Codesigning Certificate 
         if: ${{ runner.os == 'macOS' && steps.cert_check.outputs.has_cert == 'true' }} 
         uses: apple-actions/import-codesign-certs@v2 
         with: 
           p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }} 
           p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      
+      - name: Set ENABLE_CODE_SIGNING env for subsequent steps 
+        if: ${{ runner.os == 'macOS' }} 
+        id: set_signing_env 
+        run: | 
+          if [ "${{ steps.cert_check.outputs.has_cert }}" = "true" ]; then echo "enable=true" >> $GITHUB_OUTPUT else echo "enable=false" >> $GITHUB_OUTPUT fi
 
       - name: Setup System and Rust
         uses: ./.github/actions/setup-system
@@ -104,20 +125,20 @@ jobs:
         uses: ./.github/actions/setup-pnpm
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build
-        run: |
-          pnpm tauri build --ci -v --target ${{ matrix.settings.target }} --bundles ${{ matrix.settings.bundles }}
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      
+      - name: Build 
+        run: | 
+          pnpm tauri build --ci -v --target ${{ matrix.settings.target }} --bundles ${{ matrix.settings.bundles }} 
+        env: 
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }} 
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }} 
+          ENABLE_CODE_SIGNING: ${{ steps.set_signing_env.outputs.enable }} 
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }} 
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }} 
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }} 
+          APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }} 
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }} 
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }} 
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Package frontend
