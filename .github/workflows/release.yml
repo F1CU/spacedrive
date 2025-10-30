@@ -49,7 +49,7 @@ jobs:
           #   target: aarch64-unknown-linux-musl
     name: Desktop - Main ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
-    steps:zz
+    steps:
       - name: Maximize build space
         if: ${{ runner.os == 'Linux' }}
         uses: easimon/maximize-build-space@master
