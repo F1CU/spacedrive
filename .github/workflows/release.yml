@@ -49,7 +49,7 @@ jobs:
           #   target: aarch64-unknown-linux-musl
     name: Desktop - Main ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
-    steps:
+    steps:zz
       - name: Maximize build space
         if: ${{ runner.os == 'Linux' }}
         uses: easimon/maximize-build-space@master
@@ -80,11 +80,11 @@ jobs:
           base64 --decode -i AuthKey_${{ secrets.APPLE_API_KEY }}.p8.base64 -o AuthKey_${{ secrets.APPLE_API_KEY }}.p8
           rm AuthKey_${{ secrets.APPLE_API_KEY }}.p8.base64
 
-      - name: Install Codesigning Certificate
-        if: ${{ runner.os == 'macOS' }}
-        uses: apple-actions/import-codesign-certs@v2
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+      - name: Install Codesigning Certificate 
+        if: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE }} 
+        uses: apple-actions/import-codesign-certs@v2 
+        with: 
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }} 
           p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
       - name: Setup System and Rust
